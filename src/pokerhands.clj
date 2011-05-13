@@ -58,15 +58,15 @@
 
 (describe highest-suit
           (it "should rank diamonds over clubs"
-              (= :diamonds  (:suit (highest-suit (map make-card '("2d" "5c"))))))
+              (= :diamonds (:suit (highest-suit (map make-card '("2d" "5c"))))))
           (it "should rank hearts over diamonds"
-              (= :hearts  (:suit (highest-suit (map make-card '("9d" "3h"))))))
+              (= :hearts   (:suit (highest-suit (map make-card '("9d" "3h"))))))
           (it "should rank spades over hearts" 
-              (= (make-card "Qs") (highest-suit (map make-card '("Qs" "Kh")))))
+              (= :spades   (:suit (highest-suit (map make-card '("Qs" "Kh"))))))
           (it "should rank spades over diamonds"
-              (= (make-card "2s") (highest-suit (map make-card '("2s" "5d")))))
+              (= :spades   (:suit (highest-suit (map make-card '("2s" "5d"))))))
           (it "should rank spades highest"
-              (= (make-card "5s") (highest-suit (map make-card '("2d" "5c" "Kc" "Ah" "5s" "2h"))))))
+              (= :spades   (:suit (highest-suit (map make-card '("2d" "5c" "Kc" "Ah" "5s" "2h")))))))
 
 (defn highest-card
   "returns the highest card"
@@ -81,9 +81,9 @@
           (it "should return the only card when given one card"
               (= (make-card "2c") (highest-card (list (make-card "2c")))))
           (it "should return the card with the highest value when all cards are of the same suit"
-              (= (make-card "3c") (highest-card (map make-card '("2c" "3c")))))
-          (it "should return the card with the highest suit when all cards are of the same value"
-              (= :diamonds  (:suit (highest-card (map make-card '("2d" "2c")))))))
+              (= :three (:rank (highest-card (list (make-card "2c") (make-card "3c"))))))
+          (it "should return the car d with the highest suit when all cards are of the same value"
+              (= :diamonds (:suit (highest-card (list (make-card "2d") (make-card "2c")))))))
 
 (defn classify-hand
   "returns a classification of the value of the hand"
