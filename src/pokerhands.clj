@@ -2,65 +2,66 @@
   (:use [lazytest.describe])
   (:use [lazytest.expect.thrown]))
 
-(declare make-card find-suit)
+(defstruct card :rank :suit)
 
-(def *card-suits*
-  (zipmap [\c \d \h \s]
-          [:clubs :diamonds :hearts :spades]))
+(def *suits* [:clubs :diamonds :hearts :spades])
+(def *ranks* [:two :three :four :five :six :seven :eight :nine :ten :jack :queen :king :ace])
 
-(def *card-ranks*
-  (zipmap ["2" "3" "4" "5" "6" "7" "8" "9" "10" "J" "Q" "K" "A"]
-          (range 2 15)))
+(def *rank-mappings* (zipmap [\2 \3 \4 \5 \6 \7 \8 \9 \T \J \Q \K \A] *ranks*))
+(def *suit-mappings* (zipmap [\c \d \h \s] *suits*))
 
-(defn find-rank
+(defn- find-rank
   "Determines the card rank corresponding to the string value."
-  [value]
-  (or (get *card-ranks* value)
-    (throw (IllegalArgumentException. "Not a valid card"))))
-
-(defn find-suit
-  "translates character to suit"
   [char]
-  (get *card-suits* char))
+  (or (get *rank-mappings* char)
+      (throw (IllegalArgumentException. "Not a valid card - rank not found"))))
 
-(defn classify-hand
-  "returns a classification of the value of the hand"
-  [hand]
-  :highest-card)
+(defn- find-suit
+  "Determines the card suit corresponding to the input character."
+  [char]
+  (or (get *suit-mappings* char)
+      (throw (IllegalArgumentException. "Not a valid card - suit not found"))))
 
-(defn index-of
+(defn make-card [[rank suit]]
+  (struct card (find-rank rank) (find-suit suit)))
+
+(describe make-card
+          (it "creates a map representation of a card from 2c"
+              (= {:suit :clubs :rank :two} (make-card "2c")))
+          (it "creates a map representation of a card from 9s"
+              (= {:suit :spades :rank :nine} (make-card "9s")))
+          (it "creates a map representation of a card from Qs"
+              (= {:suit :spades :rank :queen} (make-card "Qs")))
+          (it "creates a map representation of a card from 11h"
+              (throws? java.lang.IllegalArgumentException #(make-card "11h"))) 
+          (it "creates a map representation of a card from Th"
+              (= {:suit :hearts :rank :ten} (make-card "Th")))) 
+
+(defn- index-of
   "searches for sought in sequence, returning index in sequence or nil if not found"
   [sought sequence]
-  (loop
-      [index 0
-       remainder sequence]
-    (if (empty? remainder)
-      nil
-      (if (= sought (first remainder))
-        index
+  (loop [index 0 remainder sequence]
+    (if (empty? remainder) nil
+      (if (= sought (first remainder)) index
         (recur (inc index) (rest remainder))))))
-  
 
-(describe classify-hand
-          (it "should classify hand as :highest-card if no better match could be found"
-              (= :highest-card (classify-hand '("2c" "3c" "4c" "5c" "9s")))))
+(defn- rank-value [card]
+  (index-of (:rank card) *ranks*))
 
-(defn suit-index
-  "Returns the numerical value of the card's suit from clubs to spades."
-  [card]
-  (index-of (:suit card) (vals *card-suits*)))
+(defn- suit-value [card]
+  (index-of (:suit card) *suits*))
 
-(defn highest-suit
+(defn- highest-suit
   "Returns the card with the highest suit"
   [cards]
-  (first (sort-by suit-index cards)))
+  (last (sort-by suit-value cards)))
 
 (describe highest-suit
           (it "should rank diamonds over clubs"
-              (= (make-card "2d") (highest-suit (map make-card '("2d" "5c")))))
+              (= :diamonds  (:suit (highest-suit (map make-card '("2d" "5c"))))))
           (it "should rank hearts over diamonds"
-              (= (make-card "3h") (highest-suit (map make-card '("9d" "3h")))))
-          (it "should rank spades over hearts"
+              (= :hearts  (:suit (highest-suit (map make-card '("9d" "3h"))))))
+          (it "should rank spades over hearts" 
               (= (make-card "Qs") (highest-suit (map make-card '("Qs" "Kh")))))
           (it "should rank spades over diamonds"
               (= (make-card "2s") (highest-suit (map make-card '("2s" "5d")))))
@@ -72,9 +73,9 @@
   ([cards]
      (reduce highest-card cards))
   ([card1 card2]
-     (if (= (:value card1) (:value card2))
+     (if (= (rank-value card1) (rank-value card2))
        (highest-suit (list card1 card2))
-       (if (> (:value card1) (:value card2)) card1 card2))))
+       (if (>  (rank-value card1) (rank-value card2)) card1 card2))))
 
 (describe highest-card
           (it "should return the only card when given one card"
@@ -82,21 +83,14 @@
           (it "should return the card with the highest value when all cards are of the same suit"
               (= (make-card "3c") (highest-card (map make-card '("2c" "3c")))))
           (it "should return the card with the highest suit when all cards are of the same value"
-              (= (make-card "2d") (highest-card (map make-card '("2d" "2c"))))))
+              (= :diamonds  (:suit (highest-card (map make-card '("2d" "2c")))))))
 
-(defn make-card
-  "creates a card" 
-  [card]
-  {:suit (find-suit (last card)) :value (find-rank (apply str (butlast card)))})
+(defn classify-hand
+  "returns a classification of the value of the hand"
+  [hand]
+  :highest-card)
 
-(describe make-card
-          (it "creates a map representation of a card from 2c"
-              (= {:suit :clubs :value 2} (make-card "2c")))
-          (it "creates a map representation of a card from 9s"
-              (= {:suit :spades :value 9} (make-card "9s")))
-          (it "creates a map representation of a card from Qs"
-              (= {:suit :spades :value 12} (make-card "Qs")))
-          (it "creates a map representation of a card from 11h"
-              (throws? java.lang.IllegalArgumentException #(make-card "11h"))) 
-          (it "creates a map representation of a card from 10h"
-              (= {:suit :hearts :value 10} (make-card "10h")))) 
+(describe classify-hand
+          (it "should classify hand as :highest-card if no better match could be found"
+              (= :highest-card (classify-hand '("2c" "3c" "4c" "5c" "9s")))))
+
